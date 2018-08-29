@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Hello Vue</title>
+
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+
+
+
+
+
+ 
+    <style type="text/css">
+        html, body, #map-canvas { height: 1000px; width: 1000px; margin: 0; padding: 0;}
+     </style>
+
+
+  <script type="text/javascript"
+    src="https://maps.googleapis.com/maps/api/js?key=[api key]">
+  </script>
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+
+
+
+    <div id="app">
+
+        <div id="map-canvas"></div>
+
+        <select id="routeSelected" v-model="selected" @change="drawPaths()">
+            <option v-for="rinfo in tomap" :value="rinfo[0]">{{ rinfo[0] }}</option>
+        </select>
+
+
+
+        <template v-for="data,i in json"> 
+            <p>
+            {{data.name}} 
+            <!-- inbound
+            <li>{{data.geometry.coordinates[0]}}</li>
+            
+            <li v-if="data.geometry.coordinates[1]">{{data.geometry.coordinates[1]}}</li> -->
+
+            <li v-for="(pattern,i) in data.geometry.coordinates">{{i}} - {{pattern}}</li>
+            </p>
+        </template>
+
+
+    </div>
+
+
+
+
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: () => ({
+                json: {},
+                rlatlongs: [],
+                tomap: [],
+                selected: null,
+                mymap: null,
+                flightPath: null,
+                poly: null,
+                gmap: null,
+                polylist: []
+
+            }),
+            mounted: function () {
+
+
+
+
+    
+    google.maps.event.addDomListener(window, 'load', this.initialize(12));
+
+
+
+
+
+                console.log('test')
+
+
+
+
+                fetch('').then((response) => {
+                    return response.json().then((json) => {
+                        this.json = json.routes
+
+                        console.log(json.routes)
+                        
+                        // for each route
+                        for (route in json.routes) {
+                            this.rlatlongs.push(json.routes[route].name);
+                            console.log('route -' + json.routes[route].name);
+                            
+
+
+                            // for each route pattern 
+                            for (pattern in json.routes[route].geometry.coordinates) {
+                               // console.log(pattern);
+                               // console.log(json.routes[route].geometry.coordinates[pattern])
+
+                                // push name and each pattern    
+                                this.rlatlongs.push(json.routes[route].geometry.coordinates[pattern]);
+
+                            }
+                            
+                            console.log(this.rlatlongs);
+                            this.tomap.push(this.rlatlongs);
+                            // clear chunk
+                            this.rlatlongs = [];
+                            
+                        }
+
+                        
+                        console.log(this.tomap);
+                    })
+                })
+
+
+            },
+            methods: {
+
+
+                  initialize: function(zoomlevel,drawpath,latilong) {
+                  var mapOptions = {
+                  center: { lat: 37.9756, lng: -121.3008 },
+                    zoom: zoomlevel
+                    };
+                    this.mymap = new google.maps.Map(document.getElementById('map-canvas'),
+                    mapOptions);
+
+
+                    if (drawpath) {
+                        drawpath.setMap(this.mymap)
+                        console.log('path found')
+                        this.mymap.setZoom(12)
+                    }
+
+                    if (latilong) {
+                        console.log('LATILONG')
+                        console.log(latilong)
+                        var flightPath = new google.maps.Polyline({
+                                    path: latilong,
+                                    geodesic: true,
+                                    strokeColor: '#FF0000',
+                                    strokeOpacity: 1.0,
+                                    strokeWeight: 2
+                                });
+                                flightPath.setMap(this.mymap)
+                    }
+
+                    //var myLatlng = new google.maps.LatLng(37.9756,-121.3008);
+                    // var marker = new google.maps.Marker({
+                    //     position: myLatlng,
+                    //     title:"Hello World!"
+                    // });
+
+                    // marker.setMap(this.mymap)
+
+
+
+
+          
+                      console.log('Initial MAP')
+                console.log(this.mymap)
+                //return(this.mymap)
+        },
+
+                
+                drawPaths: function () {
+                    
+                    //erase pattern
+                    if (this.polylist.length !==0) {
+                        for (patternpath in this.polylist) {
+                            this.polylist[patternpath].setMap(null)
+                        }
+                        this.polylist = []
+                    }
+
+                    poly = []
+                    latlong = {}
+                    
+
+                    if (this.selected) {
+                        routeNum = this.selected
+                        console.log('route ' + this.selected + ' selected');
+                        master = this.json;
+                        
+
+                        for (x in master) {
+                            if (master[x].name == routeNum) {
+                                console.log(master[x].name)
+                                routeColor = master[x].color
+
+                                for (pattern in master[x].geometry.coordinates) {
+                                    console.log(master[x].geometry.coordinates[pattern])
+                                    console.log('pattern')
+                                    for (cord in master[x].geometry.coordinates[pattern] ) {
+                                        coordinate = master[x].geometry.coordinates[pattern][cord]
+                                        console.log(coordinate[1] + '-' + coordinate[0])
+                                        latlong['lat']=coordinate[1]
+                                        latlong['lng']=coordinate[0]
+                                        poly.push(latlong)
+                                        latlong={}
+                                        
+                                        
+
+
+                                        // mylatlng = new google.maps.LatLng(coordinate[0],coordinate[1])
+                                        // marker = new google.maps.Marker({
+                                        //     position:mylatlng
+                                        // })
+                                        // marker.setMap(this.mymap)
+                                        
+                                    }
+
+                                    
+                                    flightPath = new google.maps.Polyline({
+                                    path: poly,
+                                    geodesic: true,
+                                    strokeColor: '#'+routeColor,
+                                    strokeOpacity: 1.0,
+                                    strokeWeight: 3
+                                });
+
+                                // save to delete later
+
+
+                                this.polylist.push(flightPath)
+                                poly=[]
+                                console.log('poyl and flight path')
+                                console.log(JSON.stringify(poly))
+                                console.log(flightPath)
+                                
+                                flightPath.setMap(this.mymap);
+                                console.log('MAP')
+                                console.log(this.mymap)
+
+                                }
+                            }
+                        }
+                        
+                    } // end generate poly
+
+
+                               // this.mymap.setZoom(1)
+     
+     
+     
+                               //    var myLatlng = new google.maps.LatLng(37.9756,-121.3008);
+                            //    var marker = new google.maps.Marker({
+                            //         position: myLatlng,
+                                    
+                            //     });
+                            //     marker.setMap(this.mymap)
+
+                }
+            }
+        })
+
+    </script>
+
+
+
+
+</body>
+
+</html>
